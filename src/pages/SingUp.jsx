@@ -1,7 +1,12 @@
-import React, { useState } from 'react'
-import {VscEyeClosed,VscEye} from "react-icons/vsc"
+import React, { useState } from 'react';
+import {VscEyeClosed,VscEye} from "react-icons/vsc";
 import { Link } from 'react-router-dom';
 import OAuth from '../components/OAuth';
+import{getAuth,createUserWithEmailAndPassword,updateProfile} from "firebase/auth";
+import {db} from "../firebase";
+import { doc, serverTimestamp, setDoc} from "firebase/firestore";
+import { useNavigate } from 'react-router-dom';
+import {toast} from "react-toastify";
 
 export default function SingUp() {
     const [showPassword,setShowPassword]=useState(false);
@@ -11,11 +16,34 @@ export default function SingUp() {
         password:"",
     });
     const{name,email,password}=formData;
+    const navigate = useNavigate();
     function onChange(e){
         setFormData((prevState)=>({
             ...prevState,
             [e.target.id]:e.target.value,
         }));
+    }
+    async function onSubmit(e){
+     e.preventDefault();
+    try {
+        const auth = getAuth();
+        const userCredential = await createUserWithEmailAndPassword(auth,email,password);
+        updateProfile(auth.currentUser,{
+            displayName: name,
+        });
+        const user = userCredential.user;
+        const formDataCopy={...formData};
+        delete formDataCopy.password;
+        formDataCopy.timestamp =serverTimestamp();
+
+
+        await setDoc(doc( db ,"users", user.uid), formDataCopy);
+      //  toast.success("تم التسجيل بنجاح");
+        //navigate("/");
+       
+    } catch (error) {
+        toast.error("هناك خطأ ما في التسجيل");
+    }
     }
   return (
 <section>
@@ -25,7 +53,7 @@ export default function SingUp() {
             <img src='https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8OHx8a2V5fGVufDB8fDB8fA%3D%3D&auto=format&fit=crop&w=500&q=60' alt='key' className='w-[95%] rounded-full ' />
         </div>
         <div className='w-[85%] md:w-[67%] lg:w-[40%] lg:ml-16'>
-            <form >
+            <form onSubmit={onSubmit} >
             <input type="text" id='name' value={name} onChange={onChange} placeholder="الإسم كامل"
                 className="mb-6 w-full px-4 py-2 text-xl text-gray-700 bg-white border-gray-400 rounded transition ease-in-out"/>
                 <input type="email" id='email' value={email} onChange={onChange} placeholder="البريد الإلكتروني"
